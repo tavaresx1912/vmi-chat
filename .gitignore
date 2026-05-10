@@ -1,0 +1,35 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Virtual envs
+venv/
+.venv/
+env/
+
+# Variáveis de ambiente (nunca commitar segredos)
+.env
+.env.local
+
+# Banco local
+*.db
+*.sqlite
+*.sqlite3
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Streamlit
+.streamlit/secrets.toml
+
+# Documentos internos de planejamento (mantidos no disco, fora do versionamento)
+DIVISAO.MD
+RULES.MD
