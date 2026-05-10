@@ -15,6 +15,15 @@ class Settings(BaseSettings):
     # URL de conexão com o banco. SQLite local em dev; PostgreSQL em prod.
     database_url: str = "sqlite:///./vmi.db"
 
+    # Chave secreta usada para assinar JWTs. Em produção, sempre via .env.
+    secret_key: str = "dev-only-change-me-in-production"
+
+    # Algoritmo de assinatura do JWT.
+    jwt_algorithm: str = "HS256"
+
+    # Tempo de validade do access token em minutos.
+    jwt_expire_minutes: int = 60
+
 
 # Instância única usada em toda a aplicação.
 settings = Settings()

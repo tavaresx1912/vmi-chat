@@ -12,7 +12,7 @@ from app.database import Base, engine
 # Estes imports parecem "não usados", mas são necessários: eles registram
 # os models em Base.metadata, sem o que create_all não criaria as tabelas.
 from app.models import fornecedor, user  # noqa: F401
-from app.routes import health
+from app.routes import auth, health
 
 
 @asynccontextmanager
@@ -35,3 +35,4 @@ app = FastAPI(
 
 # Registramos cada router separadamente para manter a composição explícita.
 app.include_router(health.router)
+app.include_router(auth.router)
