@@ -20,6 +20,12 @@ def get_by_cnpj(db: Session, cnpj: str) -> Fornecedor | None:
     return db.execute(stmt).scalar_one_or_none()
 
 
+def get_by_user_id(db: Session, user_id: int) -> Fornecedor | None:
+    """Mapeia User (role=fornecedor) -> Fornecedor (vinculo 1:1)."""
+    stmt = select(Fornecedor).where(Fornecedor.user_id == user_id)
+    return db.execute(stmt).scalar_one_or_none()
+
+
 def list_all(db: Session) -> list[Fornecedor]:
     """Retorna todos os fornecedores sem filtro nem ordenacao no banco.
 
