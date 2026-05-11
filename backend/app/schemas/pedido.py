@@ -75,3 +75,9 @@ class PedidoCompraComItensRead(PedidoCompraRead):
     """Resposta enriquecida: cabeçalho do pedido + itens detalhados."""
 
     itens: list[ItemPedidoRead]
+
+
+class PedidoReposicaoInput(BaseModel):
+    """Input do POST /usuario/pedidos/reposicao (RN-07)."""
+
+    produto_id: int = Field(gt=0)
