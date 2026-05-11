@@ -16,3 +16,14 @@ def list_by_produto(db: Session, produto_id: int) -> list[ProdutoFornecedor]:
         ProdutoFornecedor.produto_id == produto_id
     )
     return list(db.execute(stmt).scalars().all())
+
+
+def get_by_produto_e_fornecedor(
+    db: Session, produto_id: int, fornecedor_id: int
+) -> ProdutoFornecedor | None:
+    """Verifica se um contrato (produto, fornecedor) existe."""
+    stmt = select(ProdutoFornecedor).where(
+        ProdutoFornecedor.produto_id == produto_id,
+        ProdutoFornecedor.fornecedor_id == fornecedor_id,
+    )
+    return db.execute(stmt).scalar_one_or_none()

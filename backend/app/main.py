@@ -19,7 +19,7 @@ from app.models import (  # noqa: F401
     produto_fornecedor,
     user,
 )
-from app.routes import admin, auth, health, usuario
+from app.routes import admin, auth, fornecedor, health, usuario
 
 
 @asynccontextmanager
@@ -45,3 +45,4 @@ app.include_router(health.router)
 app.include_router(auth.router)
 app.include_router(admin.router)
 app.include_router(usuario.router)
+app.include_router(fornecedor.router)
