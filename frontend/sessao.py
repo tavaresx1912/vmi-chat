@@ -37,3 +37,13 @@ def inicializar_sessao(session_state) -> None:
     for chave, valor in _defaults().items():
         if chave not in session_state:
             session_state[chave] = valor
+
+
+def fazer_logout(session_state) -> None:
+    """Limpa o session_state completo (logout).
+
+    Usar .clear() em vez de remover chaves uma a uma evita risco de
+    deixar lixo de futuras features. A proxima renderizacao chama
+    inicializar_sessao(), que repopula os defaults do C7.
+    """
+    session_state.clear()
