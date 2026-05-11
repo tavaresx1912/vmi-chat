@@ -1,0 +1,18 @@
+"""Repository do contrato Produto x Fornecedor (R-ARQ-01)."""
+from sqlalchemy import select
+from sqlalchemy.orm import Session
+
+from app.models.produto_fornecedor import ProdutoFornecedor
+
+
+def get_by_id(db: Session, pf_id: int) -> ProdutoFornecedor | None:
+    """Retorna o contrato pelo id, ou None se nao existir."""
+    return db.get(ProdutoFornecedor, pf_id)
+
+
+def list_by_produto(db: Session, produto_id: int) -> list[ProdutoFornecedor]:
+    """Lista todos os contratos vinculados a um produto."""
+    stmt = select(ProdutoFornecedor).where(
+        ProdutoFornecedor.produto_id == produto_id
+    )
+    return list(db.execute(stmt).scalars().all())
