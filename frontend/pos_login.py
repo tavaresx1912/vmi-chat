@@ -1,10 +1,12 @@
-"""Layout pos-login (Stephanie #4) + botao de logout (#9).
+"""Layout pos-login (Stephanie #4) + logout (#9) + painel semaforo (#5).
 
 Renderiza o shell autenticado: header com info do usuario + duas colunas
-(chat a esquerda, painel a direita). Inclui botao de logout no header.
+(chat a esquerda, painel a direita). O conteudo do painel direito
+despacha por papel — apenas Usuario ve o semaforo de estoque (RN-06).
 """
 import streamlit as st
 
+from painel_semaforo import mostrar_painel_semaforo
 from sessao import fazer_logout
 
 
@@ -19,7 +21,7 @@ def mostrar_pos_login() -> None:
         _renderizar_chat()
 
     with coluna_painel:
-        _renderizar_painel()
+        _renderizar_painel(role)
 
 
 def _renderizar_header(role: str) -> None:
@@ -38,12 +40,13 @@ def _renderizar_chat() -> None:
     """Coluna esquerda: placeholder de mensagens + input no rodape."""
     st.subheader("Chat")
     st.caption("Histórico de mensagens aparece aqui (próximas branches).")
-    # Renderiza o input sem capturar o valor — wiring com NLU vem em
-    # branch futura, fora do escopo deste layout.
     st.chat_input("Digite sua mensagem...")
 
 
-def _renderizar_painel() -> None:
-    """Coluna direita: placeholder do semaforo Kanban (RN-06)."""
+def _renderizar_painel(role: str) -> None:
+    """Coluna direita: semaforo Kanban se Usuario; placeholder caso contrario."""
     st.subheader("Estoque")
-    st.caption("Semáforo Kanban aparece aqui (branch `painel-semaforo`).")
+    if role == "usuario":
+        mostrar_painel_semaforo()
+    else:
+        st.caption("Painel de estoque exclusivo para o papel Usuário.")
