@@ -11,7 +11,13 @@ from app.database import Base, engine
 
 # Estes imports parecem "não usados", mas são necessários: eles registram
 # os models em Base.metadata, sem o que create_all não criaria as tabelas.
-from app.models import fornecedor, user  # noqa: F401
+from app.models import (  # noqa: F401
+    estoque,
+    fornecedor,
+    produto,
+    produto_fornecedor,
+    user,
+)
 from app.routes import auth, health
 
 
