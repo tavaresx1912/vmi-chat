@@ -1,11 +1,11 @@
-"""Layout pos-login (Stephanie #4).
+"""Layout pos-login (Stephanie #4) + botao de logout (#9).
 
 Renderiza o shell autenticado: header com info do usuario + duas colunas
-(chat a esquerda, painel a direita). Esta branch entrega so a estrutura;
-o conteudo real (historico de mensagens, semaforo de estoque, etc.) chega
-nas proximas branches dedicadas.
+(chat a esquerda, painel a direita). Inclui botao de logout no header.
 """
 import streamlit as st
+
+from sessao import fazer_logout
 
 
 def mostrar_pos_login() -> None:
@@ -23,12 +23,15 @@ def mostrar_pos_login() -> None:
 
 
 def _renderizar_header(role: str) -> None:
-    """Header com titulo + badge do papel autenticado."""
+    """Header com titulo + badge do papel + botao de logout."""
     esquerda, direita = st.columns([3, 1])
     with esquerda:
         st.title("VMI Chat")
     with direita:
         st.markdown(f"Logado como **{role}**")
+        if st.button("Sair", key="btn_logout"):
+            fazer_logout(st.session_state)
+            st.rerun()
 
 
 def _renderizar_chat() -> None:
