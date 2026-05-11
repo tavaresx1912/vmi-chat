@@ -1,51 +1,37 @@
-"""Tela de login (Stephanie #2).
+"""Tela de login (Stephanie #2 + cliente-http refactor).
 
-Renderiza o formulario e chama POST /auth/login no backend. Em sucesso,
-popula st.session_state com os campos do C7 (`jwt`, `user_id`, `role`).
-A chamada httpx aqui e direta — o wrapper generico chega em `cliente-http`.
+Renderiza o formulario e chama POST /auth/login pelo wrapper httpx
+(`cliente.post`). Em sucesso, popula st.session_state com os campos do
+C7 (`jwt`, `user_id`, `role`).
 """
-import os
-
-import httpx
 import streamlit as st
 
-
-# Default local-dev. Em deploy real, definir BACKEND_URL no ambiente.
-_BACKEND_URL = os.environ.get("BACKEND_URL", "http://localhost:8000")
+from cliente import APIError, post
 
 
 def _autenticar(email: str, senha: str) -> tuple[bool, str]:
     """Chama POST /auth/login e popula session_state em sucesso.
 
     Retorna (sucesso, mensagem_pt_br). Mensagens sao prontas para exibir;
-    nao expoem o `detail` cru do backend em 401 (UX), mas repassam o
-    detail em outros codigos de erro inesperados.
+    nao expoem o `detail` cru do backend em 401 (UX).
     """
     try:
-        resp = httpx.post(
-            f"{_BACKEND_URL}/auth/login",
+        data = post(
+            "/auth/login",
             json={"email": email, "senha": senha},
-            timeout=10.0,
+            auth=False,
         )
-    except httpx.RequestError:
-        return False, "Servidor indisponível. Tente novamente em alguns instantes."
+    except APIError as e:
+        if e.status == 0:
+            return False, e.detail
+        if e.status == 401:
+            return False, "E-mail ou senha inválidos."
+        return False, f"Erro no login: {e.detail}"
 
-    if resp.status_code == 200:
-        data = resp.json()
-        st.session_state["jwt"] = data["access_token"]
-        st.session_state["user_id"] = data["user_id"]
-        st.session_state["role"] = data["role"]
-        return True, ""
-
-    if resp.status_code == 401:
-        return False, "E-mail ou senha inválidos."
-
-    # Outros erros: extrai `detail` no formato C3, com fallback defensivo.
-    try:
-        detail = resp.json().get("detail", "Erro desconhecido")
-    except ValueError:
-        detail = "Erro desconhecido"
-    return False, f"Erro no login: {detail}"
+    st.session_state["jwt"] = data["access_token"]
+    st.session_state["user_id"] = data["user_id"]
+    st.session_state["role"] = data["role"]
+    return True, ""
 
 
 def mostrar_tela_login() -> None:
