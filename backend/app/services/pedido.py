@@ -1,12 +1,14 @@
-"""Service do PedidoCompra: criacao de pedido manual + listagem por usuario."""
+"""Service do PedidoCompra: criacao de pedido manual + reposicao (RN-07) + listagem."""
 from typing import Any
 
 from sqlalchemy.orm import Session
 
 from app.models.pedido import ItemPedido, OrigemPedido, PedidoCompra, StatusPedido
+from app.repositories import estoque as estoque_repo
 from app.repositories import pedido as pedido_repo
 from app.repositories import produto_fornecedor as pf_repo
 from app.schemas.pedido import ItemPedidoInput
+from app.services import estoque as estoque_service
 from app.services.busca_ordenacao import ordenar_por_campo
 
 
@@ -22,6 +24,18 @@ class QuantidadeAbaixoDoMinimoError(Exception):
         self.produto_fornecedor_id = produto_fornecedor_id
         self.quantidade = quantidade
         self.minimo = minimo
+
+
+class EstoqueNaoConfiguradoError(Exception):
+    """Nao existe Estoque(produto, usuario) — usuario nunca configurou pontos."""
+
+
+class StatusVerdeNaoElegivelError(Exception):
+    """Produto em status Verde nao precisa de reposicao automatica (RN-07)."""
+
+
+class ProdutoSemContratoError(Exception):
+    """Nenhum ProdutoFornecedor vinculado ao produto — impossivel repor."""
 
 
 def _para_dict(pedido: PedidoCompra, itens: list[ItemPedido]) -> dict[str, Any]:
@@ -114,3 +128,70 @@ def listar_pedidos_usuario(
         todos = filtrados
 
     return ordenar_por_campo(todos, "criado_em", decrescente=True)
+
+
+def _escolher_contrato_preferencial(pfs: list) -> Any:
+    """Devolve o ProdutoFornecedor com preferencial=True; fallback no primeiro."""
+    for pf in pfs:
+        if pf.preferencial:
+            return pf
+    # Sem preferencial: retorna o primeiro (PRD §11 RN-07 quando ha apenas
+    # um vinculo, ele e implicitamente "o" fornecedor; quando ha varios e
+    # nenhum preferencial, escolhemos o primeiro cadastrado).
+    return pfs[0]
+
+
+def criar_pedido_reposicao(
+    db: Session,
+    *,
+    usuario_id: int,
+    produto_id: int,
+) -> dict[str, Any]:
+    """Cria pedido automatico de reposicao para um produto critico (RN-07).
+
+    Regras:
+    - Estoque(produto, usuario) deve existir; caso contrario, EstoqueNaoConfiguradoError.
+    - Status calculado precisa ser amarelo ou vermelho; verde rejeita.
+    - Fornecedor: preferencial; fallback no primeiro vinculado.
+    - Quantidade pedida: alvo voltar a Verde (= ponto_amarelo - atual), mas
+      respeitando qtd_minima_pedido do contrato.
+    """
+    estoque = estoque_repo.get_by_produto_e_user(db, produto_id, usuario_id)
+    if estoque is None:
+        raise EstoqueNaoConfiguradoError((produto_id, usuario_id))
+
+    status_atual = estoque_service.calcular_status(estoque)
+    if status_atual == "verde":
+        raise StatusVerdeNaoElegivelError(produto_id)
+
+    pfs = pf_repo.list_by_produto(db, produto_id)
+    if not pfs:
+        raise ProdutoSemContratoError(produto_id)
+    pf = _escolher_contrato_preferencial(pfs)
+
+    # Alvo: voltar pra Verde (quantidade >= ponto_amarelo). Mas respeita o
+    # minimo do contrato — sem isso, em alguns cenarios pedido seria zero
+    # ou abaixo do que o fornecedor aceita.
+    diff_para_verde = estoque.ponto_amarelo - estoque.quantidade
+    quantidade = max(diff_para_verde, pf.qtd_minima_pedido)
+
+    pedido = PedidoCompra(
+        usuario_id=usuario_id,
+        status=StatusPedido.PENDENTE,
+        origem=OrigemPedido.AUTOMATICO,
+    )
+    db.add(pedido)
+    db.flush()
+
+    item = ItemPedido(
+        pedido_id=pedido.id,
+        produto_fornecedor_id=pf.id,
+        quantidade=quantidade,
+        preco_unitario=pf.preco_contratado,
+    )
+    db.add(item)
+    db.commit()
+    db.refresh(pedido)
+    db.refresh(item)
+
+    return _para_dict(pedido, [item])

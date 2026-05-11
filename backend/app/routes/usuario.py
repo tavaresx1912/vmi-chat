@@ -16,6 +16,7 @@ from app.schemas.pedido import (
     PedidoCompraComItensCreate,
     PedidoCompraComItensRead,
     PedidoCompraRead,
+    PedidoReposicaoInput,
 )
 from app.schemas.produto import CadastrarProdutoInput, ProdutoRead
 from app.schemas.produto_fornecedor import ProdutoFornecedorRead
@@ -164,3 +165,42 @@ def listar_pedidos(
     return pedido_service.listar_pedidos_usuario(
         db, usuario_id=current.id, filtro_origem=filtro
     )
+
+
+@router.post(
+    "/pedidos/reposicao",
+    response_model=PedidoCompraComItensRead,
+    status_code=status.HTTP_201_CREATED,
+)
+def pedido_reposicao(
+    payload: PedidoReposicaoInput,
+    current: User = Depends(_usuario_only),
+    db: Session = Depends(get_db),
+) -> PedidoCompraComItensRead:
+    """Pedido automatico de reposicao (RN-07).
+
+    So aceita produtos em status Amarelo ou Vermelho. Usa fornecedor
+    preferencial (ou o primeiro vinculado) e quantidade calculada pra
+    voltar a faixa Verde respeitando minimo do contrato.
+    """
+    try:
+        return pedido_service.criar_pedido_reposicao(
+            db,
+            usuario_id=current.id,
+            produto_id=payload.produto_id,
+        )
+    except pedido_service.EstoqueNaoConfiguradoError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Estoque nao configurado para este produto — configure pontos primeiro",
+        )
+    except pedido_service.StatusVerdeNaoElegivelError:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Produto em status verde, sem necessidade de reposicao (RN-07)",
+        )
+    except pedido_service.ProdutoSemContratoError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Produto sem fornecedor vinculado",
+        )
