@@ -10,6 +10,7 @@ cabecalho colorido por grupo + contagem + lista enxuta de items.
 import streamlit as st
 
 from cliente import APIError, get
+from feedback import chamar_com_loading
 
 
 # Ordem fixa do painel (Verde -> Amarelo -> Vermelho), do menos para o
@@ -26,8 +27,12 @@ _HEADERS = {
 def mostrar_painel_semaforo() -> None:
     """Renderiza o painel completo. Caller garante role == 'usuario'."""
     try:
-        estoque = get("/usuario/estoque")
-        produtos = get("/usuario/produtos")
+        estoque = chamar_com_loading(
+            lambda: get("/usuario/estoque"), "Carregando estoque..."
+        )
+        produtos = chamar_com_loading(
+            lambda: get("/usuario/produtos"), "Carregando catálogo..."
+        )
     except APIError as e:
         if e.status == 0:
             st.warning("Servidor indisponível.")
