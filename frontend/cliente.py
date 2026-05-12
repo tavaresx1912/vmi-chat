@@ -121,3 +121,34 @@ def post(
             0, "Servidor indisponível. Tente novamente em alguns instantes."
         )
     return _processar(resp)
+
+
+def request(
+    metodo: str,
+    path: str,
+    *,
+    json: Any = None,
+    params: dict[str, Any] | None = None,
+    auth: bool = True,
+    timeout: float = _DEFAULT_TIMEOUT,
+) -> Any:
+    """Chamada generica por verbo HTTP (cobre PATCH/PUT/DELETE).
+
+    Existe pra atender o orquestrador, que precisa despachar PATCH em
+    algumas tools. Para GET/POST simples, prefira get()/post() — sao
+    leitura mais direta.
+    """
+    try:
+        resp = httpx.request(
+            metodo.upper(),
+            f"{_BACKEND_URL}{path}",
+            json=json,
+            params=params,
+            headers=_build_headers(auth),
+            timeout=timeout,
+        )
+    except httpx.RequestError:
+        raise APIError(
+            0, "Servidor indisponível. Tente novamente em alguns instantes."
+        )
+    return _processar(resp)
