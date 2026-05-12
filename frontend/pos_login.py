@@ -7,6 +7,7 @@ despacha por papel — apenas Usuario ve o semaforo de estoque (RN-06).
 
 import streamlit as st
 
+from cartao_confirmacao import ha_pendente, renderizar_cartao
 from chat import acrescentar_mensagem, renderizar_historico
 from painel_semaforo import mostrar_painel_semaforo
 from sessao import fazer_logout
@@ -50,6 +51,18 @@ def _renderizar_chat() -> None:
     historico = st.session_state["historico"]
     renderizar_historico(historico)
 
+    # Cartao de confirmacao (RNF-13): aparece quando ha acao pendente.
+    # on_confirmar e um stub ate o wiring real com Gemini/backend chegar.
+    renderizar_cartao(on_confirmar=_stub_executar_acao)
+
+    # Bloqueia a entrada enquanto ha acao pendente — uma acao por vez.
+    if ha_pendente():
+        st.chat_input(
+            "Confirme ou cancele a ação acima para continuar...",
+            disabled=True,
+        )
+        return
+
     entrada = st.chat_input("Digite sua mensagem...")
     if entrada:
         acrescentar_mensagem(historico, "usuario", entrada)
@@ -59,6 +72,15 @@ def _renderizar_chat() -> None:
             "Recebi sua mensagem. (Integração com o assistente ainda não disponível.)",
         )
         st.rerun()
+
+
+def _stub_executar_acao(tool: str, args: dict) -> str:
+    """Stub temporario — substituido pelo wiring real com backend.
+
+    A branch de integracao Streamlit<->Gemini conectara este callback ao
+    `cliente.post(...)` adequado para cada tool de escrita.
+    """
+    return f"(stub) Ação `{tool}` confirmada. Backend ainda não conectado."
 
 
 def _renderizar_painel(role: str) -> None:
