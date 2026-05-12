@@ -7,6 +7,7 @@ C7 (`jwt`, `user_id`, `role`).
 import streamlit as st
 
 from cliente import APIError, post
+from feedback import chamar_com_loading
 
 
 def _autenticar(email: str, senha: str) -> tuple[bool, str]:
@@ -16,10 +17,13 @@ def _autenticar(email: str, senha: str) -> tuple[bool, str]:
     nao expoem o `detail` cru do backend em 401 (UX).
     """
     try:
-        data = post(
-            "/auth/login",
-            json={"email": email, "senha": senha},
-            auth=False,
+        data = chamar_com_loading(
+            lambda: post(
+                "/auth/login",
+                json={"email": email, "senha": senha},
+                auth=False,
+            ),
+            "Autenticando...",
         )
     except APIError as e:
         if e.status == 0:

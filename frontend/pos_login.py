@@ -4,6 +4,7 @@ Renderiza o shell autenticado: header com info do usuario + duas colunas
 (chat a esquerda, painel a direita). O conteudo do painel direito
 despacha por papel — apenas Usuario ve o semaforo de estoque (RN-06).
 """
+
 import streamlit as st
 
 from chat import acrescentar_mensagem, renderizar_historico
