@@ -6,6 +6,7 @@ despacha por papel — apenas Usuario ve o semaforo de estoque (RN-06).
 """
 import streamlit as st
 
+from chat import acrescentar_mensagem, renderizar_historico
 from painel_semaforo import mostrar_painel_semaforo
 from sessao import fazer_logout
 
@@ -37,10 +38,26 @@ def _renderizar_header(role: str) -> None:
 
 
 def _renderizar_chat() -> None:
-    """Coluna esquerda: placeholder de mensagens + input no rodape."""
+    """Coluna esquerda: historico de mensagens + input no rodape.
+
+    Wiring com Gemini ainda nao existe; por enquanto a entrada do usuario
+    e ecoada como mensagem do bot apenas para validar o ciclo de
+    renderizacao do historico (RNF-16). A integracao real chega nas
+    proximas branches.
+    """
     st.subheader("Chat")
-    st.caption("Histórico de mensagens aparece aqui (próximas branches).")
-    st.chat_input("Digite sua mensagem...")
+    historico = st.session_state["historico"]
+    renderizar_historico(historico)
+
+    entrada = st.chat_input("Digite sua mensagem...")
+    if entrada:
+        acrescentar_mensagem(historico, "usuario", entrada)
+        acrescentar_mensagem(
+            historico,
+            "bot",
+            "Recebi sua mensagem. (Integração com o assistente ainda não disponível.)",
+        )
+        st.rerun()
 
 
 def _renderizar_painel(role: str) -> None:
