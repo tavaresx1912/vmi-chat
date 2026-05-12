@@ -7,6 +7,8 @@ Chaves publicadas (outras camadas consultam):
 - user_id (int | None): id do usuario autenticado.
 - historico (list): mensagens da conversa em memoria da sessao (RNF-16,
   sem persistencia entre sessoes).
+- pendente_confirmacao (dict | None): acao de escrita aguardando
+  confirmacao via cartao (RNF-13); None quando nao ha nada pendente.
 """
 from typing import Any
 
@@ -22,6 +24,7 @@ def _defaults() -> dict[str, Any]:
         "role": None,
         "user_id": None,
         "historico": [],
+        "pendente_confirmacao": None,
     }
 
 
