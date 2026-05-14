@@ -12,6 +12,7 @@ from app.dependencies import require_role
 from app.models.pedido import OrigemPedido
 from app.models.user import User, UserRole
 from app.schemas.estoque import ConfigurarPontosInput, EstoqueComStatusRead
+from app.schemas.fornecedor import FornecedorRead
 from app.schemas.pedido import (
     PedidoCompraComItensCreate,
     PedidoCompraComItensRead,
@@ -19,8 +20,12 @@ from app.schemas.pedido import (
     PedidoReposicaoInput,
 )
 from app.schemas.produto import CadastrarProdutoInput, ProdutoRead
-from app.schemas.produto_fornecedor import ProdutoFornecedorRead
+from app.schemas.produto_fornecedor import (
+    ProdutoFornecedorOpcaoRead,
+    ProdutoFornecedorRead,
+)
 from app.services import estoque as estoque_service
+from app.services import fornecedor as forn_service
 from app.services import pedido as pedido_service
 from app.services import produto as produto_service
 
@@ -71,6 +76,39 @@ def buscar_produtos(
 ) -> list[ProdutoRead]:
     """Lista o catalogo com busca/ordenacao manual (R-ALG-01/02)."""
     return produto_service.buscar_produtos(db, termo=termo, categoria=categoria)
+
+
+@router.get(
+    "/produtos-fornecedores",
+    response_model=list[ProdutoFornecedorOpcaoRead],
+)
+def listar_produtos_fornecedores(
+    current: User = Depends(_usuario_only),
+    db: Session = Depends(get_db),
+) -> list[ProdutoFornecedorOpcaoRead]:
+    """Lista contratos PF enriquecidos para o dropdown de itens do pedido manual."""
+    return produto_service.listar_opcoes_produto_fornecedor(db)
+
+
+# --- fornecedores ---
+
+
+@router.get(
+    "/fornecedores",
+    response_model=list[FornecedorRead],
+)
+def listar_fornecedores_usuario(
+    termo: str | None = Query(default=None, max_length=120),
+    current: User = Depends(_usuario_only),
+    db: Session = Depends(get_db),
+) -> list[FornecedorRead]:
+    """Lista fornecedores para o usuario popular dropdown em cadastrar_produto.
+
+    Espelha a logica de admin.listar_fornecedores; preferimos rota
+    propria do papel para manter a disciplina de prefixos `/admin/*` x
+    `/usuario/*` e permitir divergencia futura no shape da resposta.
+    """
+    return forn_service.list_fornecedores(db, termo=termo)
 
 
 # --- estoque ---
