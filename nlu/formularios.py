@@ -83,11 +83,13 @@ CAMPOS_POR_TOOL: dict[str, tuple[Campo, ...]] = {
         ),
     ),
     "configurar_pontos_reposicao": (
+        # Catalogo completo: pode-se configurar pontos de um produto que
+        # ainda nao tem registro de estoque (qtd=0 e criada no service).
         Campo(
             "produto_id",
             "Produto",
             "dropdown",
-            fonte_dropdown="produtos_estoque",
+            fonte_dropdown="produtos_catalogo",
         ),
         Campo(
             "ponto_reposicao",
@@ -103,6 +105,8 @@ CAMPOS_POR_TOOL: dict[str, tuple[Campo, ...]] = {
         ),
     ),
     "pedido_reposicao": (
+        # So estoques ja configurados: RN-07 exige amarelo/vermelho.
+        # Label exibe o status para o usuario escolher conscientemente.
         Campo(
             "produto_id",
             "Produto a repor",
