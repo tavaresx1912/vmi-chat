@@ -18,6 +18,15 @@ def list_by_produto(db: Session, produto_id: int) -> list[ProdutoFornecedor]:
     return list(db.execute(stmt).scalars().all())
 
 
+def list_all(db: Session) -> list[ProdutoFornecedor]:
+    """Retorna todos os contratos sem filtro nem ordenacao no banco.
+
+    Filtros/ordenacao sao feitos em memoria pelos services (R-ALG-01/02).
+    """
+    stmt = select(ProdutoFornecedor)
+    return list(db.execute(stmt).scalars().all())
+
+
 def get_by_produto_e_fornecedor(
     db: Session, produto_id: int, fornecedor_id: int
 ) -> ProdutoFornecedor | None:

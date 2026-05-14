@@ -7,6 +7,8 @@ from app.models.produto import Produto
 from app.models.produto_fornecedor import ProdutoFornecedor
 from app.repositories import fornecedor as forn_repo
 from app.repositories import produto as produto_repo
+from app.repositories import produto_fornecedor as pf_repo
+from app.schemas.produto_fornecedor import ProdutoFornecedorOpcaoRead
 from app.services.busca_ordenacao import buscar_por_substring, ordenar_por_campo
 
 
@@ -80,3 +82,35 @@ def buscar_produtos(
         todos = buscar_por_substring(todos, "nome", termo)
 
     return ordenar_por_campo(todos, "nome")
+
+
+def listar_opcoes_produto_fornecedor(
+    db: Session,
+) -> list[ProdutoFornecedorOpcaoRead]:
+    """Lista contratos PF enriquecidos com nome do produto e do fornecedor.
+
+    Usado pelo frontend para popular o dropdown de itens em
+    criar_pedido_manual sem precisar de chamadas extras por contrato.
+    Contratos cujo produto ou fornecedor referenciado nao exista mais
+    sao ignorados defensivamente (orfaos nao apareceram no dropdown).
+    Ordena por nome do produto (R-ALG-02: insertion sort manual).
+    """
+    pfs = pf_repo.list_all(db)
+    opcoes: list[ProdutoFornecedorOpcaoRead] = []
+    for pf in pfs:
+        produto = produto_repo.get_by_id(db, pf.produto_id)
+        fornecedor = forn_repo.get_by_id(db, pf.fornecedor_id)
+        if produto is None or fornecedor is None:
+            continue
+        opcoes.append(
+            ProdutoFornecedorOpcaoRead(
+                id=pf.id,
+                produto_id=pf.produto_id,
+                produto_nome=produto.nome,
+                fornecedor_id=pf.fornecedor_id,
+                fornecedor_nome=fornecedor.nome,
+                preco_contratado=pf.preco_contratado,
+                qtd_minima_pedido=pf.qtd_minima_pedido,
+            )
+        )
+    return ordenar_por_campo(opcoes, "produto_nome")

@@ -28,3 +28,20 @@ class ProdutoFornecedorRead(BaseModel):
     preco_contratado: Decimal
     prazo_entrega_dias: int
     qtd_minima_pedido: int
+
+
+class ProdutoFornecedorOpcaoRead(BaseModel):
+    """Linha enxuta para popular dropdown de itens (criar_pedido_manual).
+
+    Inclui nome do produto e do fornecedor para o frontend renderizar
+    label legivel ("Cafe Pilao (Fornecedor Beta) - R$ 12,50, min 10")
+    sem precisar de chamadas adicionais.
+    """
+
+    id: int
+    produto_id: int
+    produto_nome: str
+    fornecedor_id: int
+    fornecedor_nome: str
+    preco_contratado: Decimal
+    qtd_minima_pedido: int
