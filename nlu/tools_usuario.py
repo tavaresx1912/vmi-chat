@@ -202,7 +202,6 @@ DECL_CRIAR_PEDIDO_MANUAL: dict[str, Any] = {
         "properties": {
             "itens": {
                 "type": "array",
-                "minItems": 1,
                 "items": {
                     "type": "object",
                     "properties": {
@@ -211,7 +210,7 @@ DECL_CRIAR_PEDIDO_MANUAL: dict[str, Any] = {
                     },
                     "required": ["produto_fornecedor_id", "quantidade"],
                 },
-                "description": "Lista de itens do pedido.",
+                "description": "Lista nao vazia de itens do pedido.",
             },
         },
         "required": ["itens"],
