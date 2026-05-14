@@ -57,7 +57,9 @@ DECL_CRIAR_USUARIO: dict[str, Any] = {
                 "description": "Papel do novo usuario.",
             },
         },
-        "required": ["nome", "email", "senha", "role"],
+        # `required` intencionalmente ausente: o frontend abre um formulario
+        # para o usuario preencher; a validacao de obrigatoriedade vive na
+        # classe Pydantic *Args (executada antes de chamar o backend).
     },
 }
 
@@ -115,7 +117,8 @@ DECL_DESATIVAR_USUARIO: dict[str, Any] = {
                 "description": "ID numerico do usuario a desativar.",
             },
         },
-        "required": ["usuario_id"],
+        # `required` ausente: o frontend abre dropdown de email para o
+        # admin escolher. Validacao final via DesativarUsuarioArgs.
     },
 }
 
