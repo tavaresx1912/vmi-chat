@@ -32,22 +32,21 @@ from nlu.dispatch import (
 )
 from nlu.fallback import mensagem_fallback
 from nlu.filtro_tools import tools_para_papel
+from nlu.formularios import TOOLS_COM_FORM
 from nlu.prompts import (
     SYSTEM_PROMPT,
     SYSTEM_REINFORCO,
     build_contexto_sandbox,
 )
 from nlu.render_resultado import formatar_resultado
-from nlu.resumos import ToolSomenteLeituraError, gerar_resumo_acao
 from nlu.sanitizacao import sanitizar_entrada_usuario
 
-from cartao_confirmacao import solicitar_confirmacao
+from cartao_confirmacao import solicitar_acao
 
 
-# Tools de leitura: nao passam por cartao de confirmacao (RNF-13). Lista
-# espelhada do _LEITURAS de nlu/resumos.py — em vez de importar privado,
-# repetimos aqui porque a politica "leitura nao confirma" e do
-# orquestrador, nao do resumo.
+# Tools de leitura: nao abrem formulario (RNF-13). Sao despachadas direto
+# para o backend e o resultado vira mensagem do bot. Lista local porque
+# a politica "leitura nao confirma" pertence ao orquestrador, nao a NLU.
 _LEITURAS: frozenset[str] = frozenset(
     {
         "listar_usuarios",
@@ -140,24 +139,17 @@ def processar_mensagem(texto_usuario: str) -> None:
     tool_name = function_call.name
     args = _args_to_dict(function_call.args)
 
-    # 5. Leitura: executa direto. Escrita: cartao de confirmacao.
+    # 5. Leitura: executa direto. Escrita: abre formulario em chat. Tool
+    # desconhecida (alucinacao) vira aviso para nao travar a sessao.
     if tool_name in _LEITURAS:
         _executar_e_renderizar(tool_name, args, role, historico)
-    else:
-        try:
-            # gerar_resumo_acao valida que e tool de escrita conhecida.
-            gerar_resumo_acao(tool_name, args)
-        except ToolSomenteLeituraError:
-            # Tool nao listada em _LEITURAS mas marcada como leitura no resumo
-            # — defensivo, nao deveria ocorrer.
-            _executar_e_renderizar(tool_name, args, role, historico)
-            return
-        except Exception as e:
-            acrescentar_mensagem(
-                historico, "bot", f"⚠️ Não consegui interpretar a ação: {e}"
-            )
-            return
-        solicitar_confirmacao(tool_name, args)
+        return
+    if tool_name in TOOLS_COM_FORM:
+        solicitar_acao(tool_name, args)
+        return
+    acrescentar_mensagem(
+        historico, "bot", f"⚠️ Ferramenta desconhecida: `{tool_name}`."
+    )
 
 
 def _extrair_function_call(resposta: Any) -> Any:
