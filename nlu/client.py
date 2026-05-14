@@ -1,18 +1,18 @@
 """Cliente do Google Gemini.
 
-Expõe um getter que devolve uma instância lazy de GenerativeModel
-configurada a partir de nlu.config. A configuração global da SDK
-(api_key) ocorre apenas no primeiro acesso.
+Expõe um getter que devolve uma instância lazy de `genai.Client`
+configurada a partir de nlu.config. O `Client` é cacheado para reutilizar
+a configuração da API key entre chamadas.
 """
 from functools import lru_cache
 
-import google.generativeai as genai
+from google import genai
 
 from nlu.config import settings
 
 
 @lru_cache(maxsize=1)
-def get_client() -> genai.GenerativeModel:
+def get_client() -> genai.Client:
     """Devolve a instância compartilhada do cliente Gemini.
 
     Lança RuntimeError se GEMINI_API_KEY não estiver definida — falhar
@@ -22,5 +22,4 @@ def get_client() -> genai.GenerativeModel:
         raise RuntimeError(
             "GEMINI_API_KEY não configurada. Defina no .env ou no ambiente."
         )
-    genai.configure(api_key=settings.gemini_api_key)
-    return genai.GenerativeModel(settings.gemini_model)
+    return genai.Client(api_key=settings.gemini_api_key)

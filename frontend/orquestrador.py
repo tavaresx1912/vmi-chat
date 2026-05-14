@@ -10,19 +10,21 @@ Fluxo executado a cada mensagem do usuario:
 Erros HTTP viram mensagem do bot via `mensagem_erro_para_bot` (RNF-10).
 Falha de API key do Gemini idem — o app nao crasha.
 
-Conversao dos args da function call do SDK do google-generativeai:
-o objeto retornado e um `proto.marshal.collections.maps.MapComposite`,
-convertivel via `dict()` recursivamente. `_args_to_dict` cuida disso.
+Conversao dos args da function call do SDK do google-genai: o objeto
+retornado em `function_call.args` ja e um dict nativo, mas mantemos
+`_args_to_dict` como defesa caso o SDK envolva valores aninhados.
 """
 from typing import Any
 
 import streamlit as st
+from google.genai import types as genai_types
 
 from chat import acrescentar_mensagem
 from cliente import APIError, request as http_request
 from feedback import chamar_com_loading, mensagem_erro_para_bot
 
 from nlu.client import get_client
+from nlu.config import settings as nlu_settings
 from nlu.dispatch import (
     ArgsInvalidosError,
     ToolForaDoEscopoError,
@@ -30,7 +32,11 @@ from nlu.dispatch import (
 )
 from nlu.fallback import mensagem_fallback
 from nlu.filtro_tools import tools_para_papel
-from nlu.prompts import build_prompt
+from nlu.prompts import (
+    SYSTEM_PROMPT,
+    SYSTEM_REINFORCO,
+    build_contexto_sandbox,
+)
 from nlu.render_resultado import formatar_resultado
 from nlu.resumos import ToolSomenteLeituraError, gerar_resumo_acao
 from nlu.sanitizacao import sanitizar_entrada_usuario
@@ -87,20 +93,28 @@ def processar_mensagem(texto_usuario: str) -> None:
 
     acrescentar_mensagem(historico, "usuario", texto_limpo)
 
-    # 2. Monta prompt com filtro de tools por papel.
+    # 2. Monta contents multi-turno + filtro de tools por papel. O Gemini
+    # precisa ver o histórico inteiro para fazer slot-filling: "cadastrar
+    # usuário" → "qual o nome?" → "João" → function_call(criar_usuario, ...).
     tools = tools_para_papel(role)
-    prompt = build_prompt(
+    contents = _montar_contents(
+        historico=historico,
         papel=role or "desconhecido",
         nome=str(st.session_state.get("user_id") or "?"),
-        entrada_usuario=texto_limpo,
     )
 
     # 3. Chama Gemini.
+    config = genai_types.GenerateContentConfig(
+        system_instruction=SYSTEM_PROMPT,
+        tools=[genai_types.Tool(function_declarations=tools)] if tools else None,
+    )
     try:
         client = get_client()
         resposta = chamar_com_loading(
-            lambda: client.generate_content(
-                prompt, tools=[{"function_declarations": tools}] if tools else None
+            lambda: client.models.generate_content(
+                model=nlu_settings.gemini_model,
+                contents=contents,
+                config=config,
             ),
             "Pensando...",
         )
@@ -113,10 +127,14 @@ def processar_mensagem(texto_usuario: str) -> None:
         )
         return
 
-    # 4. Extrai function call, se houver.
+    # 4. Extrai function call. Se vier só texto (slot-filling, ex.: "qual o
+    # nome?"), mostra esse texto — o fallback genérico é apenas último recurso.
     function_call = _extrair_function_call(resposta)
     if function_call is None:
-        acrescentar_mensagem(historico, "bot", mensagem_fallback(role))
+        texto_modelo = _extrair_texto(resposta)
+        acrescentar_mensagem(
+            historico, "bot", texto_modelo or mensagem_fallback(role)
+        )
         return
 
     tool_name = function_call.name
@@ -144,18 +162,81 @@ def processar_mensagem(texto_usuario: str) -> None:
 
 def _extrair_function_call(resposta: Any) -> Any:
     """Devolve o primeiro FunctionCall encontrado nas partes da resposta, ou None."""
-    try:
-        candidates = resposta.candidates
-        if not candidates:
-            return None
-        partes = candidates[0].content.parts
-    except (AttributeError, IndexError):
-        return None
-    for parte in partes:
+    for parte in _partes_resposta(resposta):
         fc = getattr(parte, "function_call", None)
         if fc is not None and getattr(fc, "name", ""):
             return fc
     return None
+
+
+def _extrair_texto(resposta: Any) -> str:
+    """Concatena os trechos de texto da resposta — usado em slot-filling.
+
+    Quando o modelo nao emite function call mas escreve "qual o nome?",
+    mostramos esse texto ao usuario em vez do fallback generico.
+    """
+    pedacos = [
+        getattr(parte, "text", None) or "" for parte in _partes_resposta(resposta)
+    ]
+    return "\n".join(p for p in pedacos if p).strip()
+
+
+def _partes_resposta(resposta: Any) -> list[Any]:
+    try:
+        candidates = resposta.candidates
+        if not candidates:
+            return []
+        return list(candidates[0].content.parts)
+    except (AttributeError, IndexError):
+        return []
+
+
+def _montar_contents(
+    *, historico: list[dict[str, Any]], papel: str, nome: str
+) -> list[genai_types.Content]:
+    """Converte o historico do chat em `contents` para o Gemini.
+
+    Estrutura: 1) contexto da sessao (sandbox anti-injection) como 1a msg
+    `user`; 2) "Entendido." como resposta `model` para preservar a
+    alternancia; 3) cada item do historico mapeado para user/model; 4)
+    reforco de sistema concatenado ao final da ultima mensagem do
+    usuario (vies de recencia).
+    """
+    contexto = build_contexto_sandbox(papel=papel, nome=nome)
+    contents: list[genai_types.Content] = [
+        genai_types.Content(
+            role="user", parts=[genai_types.Part.from_text(text=contexto)]
+        ),
+        genai_types.Content(
+            role="model", parts=[genai_types.Part.from_text(text="Entendido.")]
+        ),
+    ]
+    indice_ultimo_user = _indice_ultimo_user(historico)
+    for i, msg in enumerate(historico):
+        autor = msg.get("autor")
+        texto = msg.get("texto", "")
+        if autor == "usuario":
+            if i == indice_ultimo_user:
+                texto = f"{texto}\n\n{SYSTEM_REINFORCO}"
+            contents.append(
+                genai_types.Content(
+                    role="user", parts=[genai_types.Part.from_text(text=texto)]
+                )
+            )
+        elif autor == "bot":
+            contents.append(
+                genai_types.Content(
+                    role="model", parts=[genai_types.Part.from_text(text=texto)]
+                )
+            )
+    return contents
+
+
+def _indice_ultimo_user(historico: list[dict[str, Any]]) -> int:
+    for i in range(len(historico) - 1, -1, -1):
+        if historico[i].get("autor") == "usuario":
+            return i
+    return -1
 
 
 def _executar_e_renderizar(
