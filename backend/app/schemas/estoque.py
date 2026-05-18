@@ -54,6 +54,17 @@ class EstoqueComStatusRead(EstoqueRead):
     status: StatusSemaforo
 
 
+class EstoqueUrgenteRead(EstoqueComStatusRead):
+    """Estoque crítico priorizado pelo heap de reposição.
+
+    Inclui `deficit` (= quantidade - ponto_reposicao): valor negativo indica
+    consumo abaixo do ponto de reposição (vermelho), positivo entre as duas
+    faixas (amarelo). Verdes não aparecem na lista.
+    """
+
+    deficit: int
+
+
 class ConfigurarPontosInput(BaseModel):
     """Input PATCH /usuario/estoque/{produto_id}/pontos."""
 

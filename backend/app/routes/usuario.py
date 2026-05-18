@@ -11,7 +11,11 @@ from app.database import get_db
 from app.dependencies import require_role
 from app.models.pedido import OrigemPedido
 from app.models.user import User, UserRole
-from app.schemas.estoque import ConfigurarPontosInput, EstoqueComStatusRead
+from app.schemas.estoque import (
+    ConfigurarPontosInput,
+    EstoqueComStatusRead,
+    EstoqueUrgenteRead,
+)
 from app.schemas.fornecedor import FornecedorRead
 from app.schemas.pedido import (
     PedidoCompraComItensCreate,
@@ -27,6 +31,7 @@ from app.schemas.produto_fornecedor import (
 from app.services import estoque as estoque_service
 from app.services import fornecedor as forn_service
 from app.services import pedido as pedido_service
+from app.services import priorizacao_reposicao as prio_service
 from app.services import produto as produto_service
 
 router = APIRouter(prefix="/usuario", tags=["usuario"])
@@ -203,6 +208,23 @@ def listar_pedidos(
     return pedido_service.listar_pedidos_usuario(
         db, usuario_id=current.id, filtro_origem=filtro
     )
+
+
+@router.get(
+    "/reposicao/urgentes",
+    response_model=list[EstoqueUrgenteRead],
+)
+def listar_reposicao_urgentes(
+    current: User = Depends(_usuario_only),
+    db: Session = Depends(get_db),
+) -> list[EstoqueUrgenteRead]:
+    """Fila de reposicao priorizada: itens criticos do mais urgente ao menos.
+
+    Drena um MinHeap por (deficit, produto_id) -> vermelho aparece antes de
+    amarelo; dentro de cada faixa, deficit menor (mais negativo) vem primeiro.
+    Verdes ficam de fora.
+    """
+    return prio_service.listar_urgentes(db, usuario_id=current.id)
 
 
 @router.post(
