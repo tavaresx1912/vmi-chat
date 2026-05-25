@@ -1,6 +1,8 @@
 """Schemas Pydantic de entrada e saída para o Fornecedor."""
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
+from app.models.pedido import StatusPedido
+
 
 class FornecedorCreate(BaseModel):
     """Dados para criar um fornecedor.
@@ -26,3 +28,32 @@ class FornecedorRead(BaseModel):
     user_id: int
     nome: str
     cnpj: str
+
+
+class FornecedorSimilarRead(BaseModel):
+    """Fornecedor descoberto via BFS no grafo de similaridade.
+
+    `distancia` é o número de hops desde a origem da busca (1 = vizinho
+    direto); `peso_aresta_descobridor` é a quantidade de produtos em
+    comum com quem o descobriu na travessia.
+    """
+
+    id: int
+    nome: str
+    cnpj: str
+    distancia: int = Field(ge=1)
+    peso_aresta_descobridor: int = Field(ge=1)
+
+
+class AtualizarEstoqueInput(BaseModel):
+    """Input do PATCH /fornecedor/estoque (VMI - RN-03)."""
+
+    produto_id: int = Field(gt=0)
+    usuario_id: int = Field(gt=0)
+    nova_quantidade: int = Field(ge=0)
+
+
+class AtualizarStatusPedidoInput(BaseModel):
+    """Input do PATCH /fornecedor/pedidos/{pedido_id}/status."""
+
+    novo_status: StatusPedido

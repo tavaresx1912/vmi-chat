@@ -52,3 +52,32 @@ class ItemPedidoRead(BaseModel):
     produto_fornecedor_id: int
     quantidade: int
     preco_unitario: Decimal
+
+
+class ItemPedidoInput(BaseModel):
+    """Linha de input de um pedido manual (sem pedido_id, sem preço).
+
+    O `pedido_id` é atribuído pelo service no momento da criação. O
+    `preco_unitario` vem como snapshot do `ProdutoFornecedor.preco_contratado`.
+    """
+
+    produto_fornecedor_id: int = Field(gt=0)
+    quantidade: int = Field(gt=0)
+
+
+class PedidoCompraComItensCreate(BaseModel):
+    """Payload composto para criar um pedido manual com seus itens."""
+
+    itens: list[ItemPedidoInput] = Field(min_length=1)
+
+
+class PedidoCompraComItensRead(PedidoCompraRead):
+    """Resposta enriquecida: cabeçalho do pedido + itens detalhados."""
+
+    itens: list[ItemPedidoRead]
+
+
+class PedidoReposicaoInput(BaseModel):
+    """Input do POST /usuario/pedidos/reposicao (RN-07)."""
+
+    produto_id: int = Field(gt=0)

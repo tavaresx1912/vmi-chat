@@ -96,13 +96,8 @@ DECL_CADASTRAR_PRODUTO: dict[str, Any] = {
                 ),
             },
         },
-        "required": [
-            "nome",
-            "categoria",
-            "fornecedor_id",
-            "preco_contratado",
-            "qtd_minima_pedido",
-        ],
+        # `required` ausente: o frontend abre formulario com dropdown de
+        # fornecedor; CadastrarProdutoArgs valida obrigatoriedade no submit.
     },
 }
 
@@ -169,7 +164,8 @@ DECL_CONFIGURAR_PONTOS_REPOSICAO: dict[str, Any] = {
                 "description": "Limite Amarelo (deve ser maior que ponto_reposicao).",
             },
         },
-        "required": ["produto_id", "ponto_reposicao", "ponto_amarelo"],
+        # `required` ausente: ConfigurarPontosReposicaoArgs valida no submit
+        # do formulario (incl. a regra ponto_amarelo > ponto_reposicao).
     },
 }
 
@@ -202,7 +198,6 @@ DECL_CRIAR_PEDIDO_MANUAL: dict[str, Any] = {
         "properties": {
             "itens": {
                 "type": "array",
-                "minItems": 1,
                 "items": {
                     "type": "object",
                     "properties": {
@@ -211,10 +206,11 @@ DECL_CRIAR_PEDIDO_MANUAL: dict[str, Any] = {
                     },
                     "required": ["produto_fornecedor_id", "quantidade"],
                 },
-                "description": "Lista de itens do pedido.",
+                "description": "Lista nao vazia de itens do pedido.",
             },
         },
-        "required": ["itens"],
+        # `required` ausente: o frontend abre formulario com lista dinamica
+        # de itens (dropdown produto-fornecedor + qtd). Validacao por CriarPedidoManualArgs.
     },
 }
 
@@ -243,7 +239,8 @@ DECL_PEDIDO_REPOSICAO: dict[str, Any] = {
                 "description": "ID do produto a repor.",
             },
         },
-        "required": ["produto_id"],
+        # `required` ausente: dropdown do estoque no formulario; validacao
+        # de obrigatoriedade via PedidoReposicaoArgs.
     },
 }
 

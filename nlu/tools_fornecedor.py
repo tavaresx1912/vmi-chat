@@ -25,6 +25,11 @@ class AtualizarEstoqueArgs(BaseModel):
     """Argumentos da tool atualizar_estoque (RN-03 - gestao VMI)."""
 
     produto_id: int = Field(gt=0)
+    # No VMI, o fornecedor atualiza o estoque do produto em um cliente
+    # especifico (PRD §3 / RN-03). Sem `usuario_id` o backend nao saberia
+    # de qual cliente e o estoque — adicionado pra fechar o gap com
+    # PATCH /fornecedor/estoque (AtualizarEstoqueInput).
+    usuario_id: int = Field(gt=0)
     # Quantidade absoluta apos a atualizacao (nao e delta). Zero e valido:
     # o fornecedor pode zerar um estoque, mas nao informar valor negativo.
     nova_quantidade: int = Field(ge=0)
@@ -33,8 +38,8 @@ class AtualizarEstoqueArgs(BaseModel):
 DECL_ATUALIZAR_ESTOQUE: dict[str, Any] = {
     "name": "atualizar_estoque",
     "description": (
-        "Atualiza a quantidade em estoque de um produto (VMI - RN-03). "
-        "Apenas Fornecedor pode chamar."
+        "Atualiza a quantidade em estoque de um produto para um cliente "
+        "especifico (VMI - RN-03). Apenas Fornecedor pode chamar."
     ),
     "parameters": {
         "type": "object",
@@ -43,12 +48,16 @@ DECL_ATUALIZAR_ESTOQUE: dict[str, Any] = {
                 "type": "integer",
                 "description": "ID do produto a atualizar.",
             },
+            "usuario_id": {
+                "type": "integer",
+                "description": "ID do cliente (Usuario) cujo estoque sera atualizado.",
+            },
             "nova_quantidade": {
                 "type": "integer",
                 "description": "Nova quantidade absoluta em estoque (>= 0).",
             },
         },
-        "required": ["produto_id", "nova_quantidade"],
+        "required": ["produto_id", "usuario_id", "nova_quantidade"],
     },
 }
 
