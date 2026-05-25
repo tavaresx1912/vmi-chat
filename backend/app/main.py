@@ -19,7 +19,7 @@ from app.models import (  # noqa: F401
     produto_fornecedor,
     user,
 )
-from app.routes import auth, health
+from app.routes import admin, auth, health
 
 
 @asynccontextmanager
@@ -43,3 +43,4 @@ app = FastAPI(
 # Registramos cada router separadamente para manter a composição explícita.
 app.include_router(health.router)
 app.include_router(auth.router)
+app.include_router(admin.router)

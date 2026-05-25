@@ -18,3 +18,12 @@ def get_by_email(db: Session, email: str) -> User | None:
     """Retorna o usuário pelo e-mail, ou None se não existir."""
     stmt = select(User).where(User.email == email)
     return db.execute(stmt).scalar_one_or_none()
+
+
+def list_all(db: Session) -> list[User]:
+    """Retorna todos os usuários sem filtro nem ordenação no banco.
+
+    Filtros/ordenação são feitos em memória pelos services (R-ALG-01/02).
+    """
+    stmt = select(User)
+    return list(db.execute(stmt).scalars().all())
