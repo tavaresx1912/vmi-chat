@@ -174,11 +174,22 @@ def _extrair_texto(resposta: Any) -> str:
 
 
 def _partes_resposta(resposta: Any) -> list[Any]:
+    """Extrai a lista de partes da primeira candidate; [] se ausente.
+
+    Gemini pode devolver candidato sem content ou com parts=None quando
+    bate em safety filter, MAX_TOKENS ou outro finish_reason que
+    interrompe a geracao. Tratamos como "sem function call e sem texto"
+    — o caller cai em mensagem_fallback em vez de crashar.
+    """
     try:
         candidates = resposta.candidates
         if not candidates:
             return []
-        return list(candidates[0].content.parts)
+        content = getattr(candidates[0], "content", None)
+        if content is None:
+            return []
+        partes = getattr(content, "parts", None)
+        return list(partes) if partes else []
     except (AttributeError, IndexError):
         return []
 
