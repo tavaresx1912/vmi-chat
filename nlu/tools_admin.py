@@ -6,10 +6,10 @@ Cada tool expoe dois artefatos:
 - *Args: classe Pydantic para validar os argumentos retornados pelo Gemini
   antes do Streamlit chamar o backend (PRD §11.4 passo 2).
 """
+
 from typing import Any, Literal
 
 from pydantic import BaseModel, EmailStr, Field
-
 
 # Papeis do sistema, espelhados do backend (UserRole) sem import direto
 # para preservar a independencia da camada NLU.
@@ -47,9 +47,7 @@ DECL_CRIAR_USUARIO: dict[str, Any] = {
             },
             "senha": {
                 "type": "string",
-                "description": (
-                    "Senha em texto puro; o backend transforma em hash."
-                ),
+                "description": ("Senha em texto puro; o backend transforma em hash."),
             },
             "role": {
                 "type": "string",

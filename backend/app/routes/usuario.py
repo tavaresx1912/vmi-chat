@@ -12,7 +12,7 @@ from app.dependencies import require_role
 from app.models.pedido import OrigemPedido
 from app.models.user import User, UserRole
 from app.schemas.estoque import ConfigurarPontosInput, EstoqueComStatusRead
-from app.schemas.fornecedor import FornecedorRead
+from app.schemas.fornecedor import FornecedorRead, FornecedorSimilarRead
 from app.schemas.pedido import (
     PedidoCompraComItensCreate,
     PedidoCompraComItensRead,
@@ -26,6 +26,7 @@ from app.schemas.produto_fornecedor import (
 )
 from app.services import estoque as estoque_service
 from app.services import fornecedor as forn_service
+from app.services import grafo_fornecedores as grafo_forn_service
 from app.services import pedido as pedido_service
 from app.services import produto as produto_service
 
@@ -109,6 +110,26 @@ def listar_fornecedores_usuario(
     `/usuario/*` e permitir divergencia futura no shape da resposta.
     """
     return forn_service.list_fornecedores(db, termo=termo)
+
+
+@router.get(
+    "/fornecedores/{fornecedor_id}/similares",
+    response_model=list[FornecedorSimilarRead],
+)
+def listar_fornecedores_similares(
+    fornecedor_id: int,
+    profundidade: int = Query(default=2, ge=1, le=5),
+    current: User = Depends(_usuario_only),
+    db: Session = Depends(get_db),
+) -> list[FornecedorSimilarRead]:
+    """BFS no grafo de similaridade: vizinhos do fornecedor dentro de N hops.
+
+    Aresta {Fa,Fb} = produtos do catalogo em comum (peso = quantidade).
+    Util para sugerir substitutos quando o fornecedor preferido fica fora.
+    """
+    return grafo_forn_service.fornecedores_similares(
+        db, fornecedor_id=fornecedor_id, profundidade=profundidade
+    )
 
 
 # --- estoque ---

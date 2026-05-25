@@ -4,6 +4,7 @@ Todas exigem `require_role(UserRole.FORNECEDOR)` e checagem extra de
 relacao no service (fornecedor so atualiza estoque/status de pedidos que
 envolvem produtos dele).
 """
+
 from fastapi import APIRouter, Depends, HTTPException, status as http_status
 from sqlalchemy.orm import Session
 

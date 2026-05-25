@@ -30,6 +30,21 @@ class FornecedorRead(BaseModel):
     cnpj: str
 
 
+class FornecedorSimilarRead(BaseModel):
+    """Fornecedor descoberto via BFS no grafo de similaridade.
+
+    `distancia` é o número de hops desde a origem da busca (1 = vizinho
+    direto); `peso_aresta_descobridor` é a quantidade de produtos em
+    comum com quem o descobriu na travessia.
+    """
+
+    id: int
+    nome: str
+    cnpj: str
+    distancia: int = Field(ge=1)
+    peso_aresta_descobridor: int = Field(ge=1)
+
+
 class AtualizarEstoqueInput(BaseModel):
     """Input do PATCH /fornecedor/estoque (VMI - RN-03)."""
 
